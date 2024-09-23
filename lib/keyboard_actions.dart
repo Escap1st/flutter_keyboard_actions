@@ -86,20 +86,23 @@ class KeyboardActions extends StatefulWidget {
   /// Does not clear the focus if you tap on the node focused, useful for keeping the text cursor selection working. Usually used with tapOutsideBehavior as translucent
   final bool keepFocusOnTappingNode;
 
-  const KeyboardActions(
-      {this.child,
-      this.bottomAvoiderScrollPhysics,
-      this.enable = true,
-      this.autoScroll = true,
-      this.isDialog = false,
-      @Deprecated('Use tapOutsideBehavior instead.')
-          this.tapOutsideToDismiss = false,
-      this.tapOutsideBehavior = TapOutsideBehavior.none,
-      required this.config,
-      this.overscroll = 12.0,
-      this.disableScroll = false,
-      this.keepFocusOnTappingNode = false})
-      : assert(child != null);
+  /// Should be set if child's controller has been set explicitly
+  final ScrollController? scrollController;
+
+  const KeyboardActions({
+    this.child,
+    this.bottomAvoiderScrollPhysics,
+    this.enable = true,
+    this.autoScroll = true,
+    this.isDialog = false,
+    @Deprecated('Use tapOutsideBehavior instead.') this.tapOutsideToDismiss = false,
+    this.tapOutsideBehavior = TapOutsideBehavior.none,
+    required this.config,
+    this.overscroll = 12.0,
+    this.disableScroll = false,
+    this.keepFocusOnTappingNode = false,
+    this.scrollController,
+  }) : assert(child != null);
 
   @override
   KeyboardActionstate createState() => KeyboardActionstate();
@@ -156,7 +159,7 @@ class KeyboardActionstate extends State<KeyboardActions>
     if (_keyParent.currentContext != null) {
       final widgetRenderBox =
           _keyParent.currentContext!.findRenderObject() as RenderBox;
-      final fullHeight = MediaQuery.of(context).size.height;
+      final fullHeight = MediaQuery.sizeOf(context).height;
       final widgetHeight = widgetRenderBox.size.height;
       final widgetTop = widgetRenderBox.localToGlobal(Offset.zero).dy;
       final widgetBottom = widgetTop + widgetHeight;
@@ -290,7 +293,7 @@ class KeyboardActionstate extends State<KeyboardActions>
   @override
   void didChangeMetrics() {
     if (PlatformCheck.isAndroid) {
-      final value = WidgetsBinding.instance.window.viewInsets.bottom;
+      final value = View.of(context).viewInsets.bottom;
       bool keyboardIsOpen = value > 0;
       _onKeyboardChanged(keyboardIsOpen);
       isKeyboardOpen = keyboardIsOpen;
@@ -327,7 +330,6 @@ class KeyboardActionstate extends State<KeyboardActions>
           ? _currentAction!.footerBuilder!(context)
           : null;
 
-      final queryData = MediaQuery.of(context);
       return Stack(
         children: [
           if (widget.tapOutsideBehavior != TapOutsideBehavior.none ||
@@ -351,7 +353,7 @@ class KeyboardActionstate extends State<KeyboardActions>
           Positioned(
             left: 0,
             right: 0,
-            bottom: queryData.viewInsets.bottom,
+            bottom: MediaQuery.viewInsetsOf(context).bottom,
             child: Material(
               color: config!.keyboardBarColor ?? Colors.grey[200],
               elevation: config!.keyboardBarElevation ?? 20,
@@ -413,10 +415,10 @@ class KeyboardActionstate extends State<KeyboardActions>
         ? _kBarSize
         : 0; // offset for the actions bar
 
-    final keyboardHeight = EdgeInsets.fromWindowPadding(
-            WidgetsBinding.instance.window.viewInsets,
-            WidgetsBinding.instance.window.devicePixelRatio)
-        .bottom;
+    final keyboardHeight = EdgeInsets.fromViewPadding(
+      View.of(context).viewInsets,
+      View.of(context).devicePixelRatio,
+    ).bottom;
 
     newOffset += keyboardHeight; // + offset for the system keyboard
 
@@ -443,7 +445,7 @@ class KeyboardActionstate extends State<KeyboardActions>
     if (widget.isDialog) {
       final render =
           _keyParent.currentContext?.findRenderObject() as RenderBox?;
-      final fullHeight = MediaQuery.of(context).size.height;
+      final fullHeight = MediaQuery.sizeOf(context).height;
       final localHeight = render?.size.height ?? 0;
       _localMargin = (fullHeight - localHeight) / 2;
     }
@@ -509,7 +511,7 @@ class KeyboardActionstate extends State<KeyboardActions>
           _isShowing ? CrossFadeState.showFirst : CrossFadeState.showSecond,
       firstChild: Container(
         height: _kBarSize,
-        width: MediaQuery.of(context).size.width,
+        width: MediaQuery.sizeOf(context).width,
         decoration: BoxDecoration(
           border: Border(
             top: BorderSide(
@@ -613,6 +615,7 @@ class KeyboardActionstate extends State<KeyboardActions>
                         (_timeToDismiss.inMilliseconds * 1.8).toInt()),
                 autoScroll: widget.autoScroll,
                 physics: widget.bottomAvoiderScrollPhysics,
+                scrollController: widget.scrollController,
                 child: widget.child,
               ),
             ),

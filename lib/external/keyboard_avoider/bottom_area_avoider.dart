@@ -42,16 +42,20 @@ class BottomAreaAvoider extends StatefulWidget {
   /// The [ScrollPhysics] of the [SingleChildScrollView] which contains child
   final ScrollPhysics? physics;
 
-  BottomAreaAvoider(
-      {Key? key,
-      required this.child,
-      required this.areaToAvoid,
-      this.autoScroll = false,
-      this.duration = defaultDuration,
-      this.curve = defaultCurve,
-      this.overscroll = defaultOverscroll,
-      this.physics})
-      : //assert(child is ScrollView ? child.controller != null : true),
+  /// Should be set if child's controller has been set explicitly
+  final ScrollController? scrollController;
+
+  BottomAreaAvoider({
+    Key? key,
+    required this.child,
+    required this.areaToAvoid,
+    this.autoScroll = false,
+    this.duration = defaultDuration,
+    this.curve = defaultCurve,
+    this.overscroll = defaultOverscroll,
+    this.physics,
+    this.scrollController,
+  })  : //assert(child is ScrollView ? child.controller != null : true),
         assert(areaToAvoid >= 0, 'Cannot avoid a negative area'),
         super(key: key);
 
@@ -87,6 +91,18 @@ class BottomAreaAvoiderState extends State<BottomAreaAvoider> {
         _animationKey.currentState?.animation
             .addStatusListener(_animationListener!);
       });
+    }
+
+    // If there is a explicitly defined [ScrollController], use it
+    if (widget.scrollController != null) {
+      _scrollController = widget.scrollController;
+      return _buildAnimatedContainer(widget.child);
+    }
+
+    // If there is a [ScrollController], adjust the bottom padding of the [child]
+    if (PrimaryScrollController.maybeOf(context) != null) {
+      _scrollController = PrimaryScrollController.of(context);
+      return _buildAnimatedContainer(widget.child);
     }
 
     // If [child] is a [ScrollView], get its [ScrollController]
